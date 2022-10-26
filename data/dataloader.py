@@ -2,7 +2,7 @@ import json
 from typing import Counter
 import torch
 import copy
-from data.Dialog import *
+from data.dialog import *
 import numpy as np
 import re
 

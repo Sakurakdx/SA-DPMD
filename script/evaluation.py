@@ -1,4 +1,4 @@
-from data.Dataloader import *
+from data.dataloader import *
 
 def evaluation(gold_file, predict_file):
 

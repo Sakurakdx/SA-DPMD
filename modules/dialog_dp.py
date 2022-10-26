@@ -1,8 +1,8 @@
 import torch
-from modules.Layer import _model_var, pad_sequence
+from modules.layer import _model_var, pad_sequence
 import numpy as np
 import torch.nn.functional as F
-from data.Vocab import *
+from data.vocab import *
 
 
 class DialogDP(object):

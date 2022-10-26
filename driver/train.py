@@ -4,15 +4,15 @@ import pickle
 import random
 import time
 import argparse
-from data.Config import *
-from modules.DialogDP import *
-from modules.Optimizer import *
-from modules.Decoder import *
+from data.config import *
+from modules.dialog_dp import *
+from modules.optimizer import *
+from modules.decoder import *
 from script.evaluation import *
-from modules.GlobalEncoder import *
-from data.BertTokenHelper import *
-from modules.BertModelTune import *
-from modules.SPEncoder import SPEncoder
+from modules.global_encoder import *
+from data.auto_tokenizer import *
+from modules.auto_plm import *
+from modules.sp_encoder import SPEncoder
 
 from torch.cuda.amp import autocast as autocast
 from torch.cuda.amp.grad_scaler import GradScaler
@@ -179,7 +179,7 @@ if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
     argparser.add_argument('--config_file', default='examples/default.cfg')
     argparser.add_argument('--model', default='BaseParser')
-    argparser.add_argument('--thread', default=1, type=int, help='thread num')
+    argparser.add_argument('--thread', default=4, type=int, help='thread num')
     argparser.add_argument('--use-cuda', action='store_true', default=True)
 
     args, extra_args = argparser.parse_known_args()

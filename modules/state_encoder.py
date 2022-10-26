@@ -1,5 +1,5 @@
-from modules.Layer import *
-from modules.ScaleMix import *
+from modules.layer import *
+from modules.scale_mix import *
 
 import torch.nn as nn
 import math

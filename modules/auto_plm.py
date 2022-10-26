@@ -1,13 +1,12 @@
-from modules.Layer import *
-from transformers.models.bert.modeling_bert import BertModel
-
+from modules.layer import *
+from transformers import AutoModel
 
 
 class BertExtractor(nn.Module):
     def __init__(self, bert_dir, config, tok_helper):
         super(BertExtractor, self).__init__()
         self.config = config
-        self.bert = BertModel.from_pretrained(bert_dir)
+        self.bert = AutoModel.from_pretrained(bert_dir)
         self.bert.resize_token_embeddings(len(tok_helper.tokenizer))
         print("Load bert model finished.")
 

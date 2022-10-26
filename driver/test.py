@@ -4,15 +4,15 @@ import random
 import time
 import pickle
 import argparse
-from data.Config import *
-from modules.DialogDP import *
-from modules.Decoder import *
+from data.config import *
+from modules.dialog_dp import *
+from modules.decoder import *
 from script.evaluation import *
-from modules.GlobalEncoder import *
-from data.BertTokenHelper import *
-from modules.BertModelTune import *
-from modules.SPEncoder import SPEncoder
-from driver.Train import predict
+from modules.global_encoder import *
+from data.auto_tokenizer import *
+from modules.auto_plm import *
+from modules.sp_encoder import SPEncoder
+from driver.train import predict
 
 from torch.cuda.amp import autocast as autocast
 from torch.cuda.amp.grad_scaler import GradScaler

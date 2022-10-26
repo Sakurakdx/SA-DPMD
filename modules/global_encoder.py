@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch
-from modules.Layer import NonLinear
-from modules.ScaleMix import *
+from modules.layer import NonLinear
+from modules.scale_mix import *
 import math
 
 class GlobalEncoder(nn.Module):

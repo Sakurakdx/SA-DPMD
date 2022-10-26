@@ -1,4 +1,4 @@
-from modules.StateEncoder import *
+from modules.state_encoder import *
 
 
 class Decoder(nn.Module):
