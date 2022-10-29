@@ -2,9 +2,9 @@ from modules.layer import *
 from transformers import AutoModel
 
 
-class BertExtractor(nn.Module):
+class AutoExtractor(nn.Module):
     def __init__(self, bert_dir, config, tok_helper):
-        super(BertExtractor, self).__init__()
+        super(AutoExtractor, self).__init__()
         self.config = config
         self.bert = AutoModel.from_pretrained(bert_dir)
         self.bert.resize_token_embeddings(len(tok_helper.tokenizer))
@@ -36,5 +36,5 @@ class BertExtractor(nn.Module):
                             attention_mask=attention_mask,
                             token_type_ids=token_type_ids,
                             output_hidden_states=True)
-        return outputs.last_hidden_state, outputs.pooler_output, outputs.hidden_states
+        return outputs.hidden_states
 

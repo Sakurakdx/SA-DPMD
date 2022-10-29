@@ -50,8 +50,8 @@ if __name__ == '__main__':
 
     torch.set_num_threads(args.thread)
 
-    tok_helper = BertTokenHelper(config.load_bert_path)
-    bert_extractor = BertExtractor(config.load_bert_path, config, tok_helper)
+    tok_helper = AutoTokenHelper(config.load_bert_path)
+    bert_extractor = AutoExtractor(config.load_bert_path, config, tok_helper)
 
     global_encoder = GlobalEncoder(vocab, config, bert_extractor)
     state_encoder = StateEncoder(vocab, config)

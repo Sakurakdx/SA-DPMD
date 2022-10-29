@@ -3,7 +3,7 @@ import torch
 class Optimizer:
     def __init__(self, parameter, config):
         self.optim = torch.optim.Adam(parameter, lr=config.learning_rate, betas=(config.beta_1, config.beta_2),
-                                      eps=config.epsilon, weight_decay=config.L2_REG, amsgrad=False)
+                                      eps=config.epsilon, weight_decay=config.l2_reg, amsgrad=False)
         decay, decay_step = config.decay, config.decay_steps
         l = lambda epoch: decay ** (epoch // decay_step)
         self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optim, lr_lambda=l)

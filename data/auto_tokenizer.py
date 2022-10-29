@@ -1,6 +1,6 @@
 from transformers import AutoTokenizer
 
-class BertTokenHelper(object):
+class AutoTokenHelper(object):
     def __init__(self, bert_dir):
         self.tokenizer = AutoTokenizer.from_pretrained(bert_dir)
         special_tokens_dict = {'additional_special_tokens': ['URL', 'FILEPATH', '<root>']}

@@ -177,7 +177,7 @@ if __name__ == '__main__':
 
     # args
     argparser = argparse.ArgumentParser()
-    argparser.add_argument('--config_file', default='examples/default.cfg')
+    argparser.add_argument('--config_file', default='molweni.cfg')
     argparser.add_argument('--model', default='BaseParser')
     argparser.add_argument('--thread', default=4, type=int, help='thread num')
     argparser.add_argument('--use-cuda', action='store_true', default=True)
@@ -185,9 +185,9 @@ if __name__ == '__main__':
     args, extra_args = argparser.parse_known_args()
     config = Configurable(args.config_file, extra_args)
 
-    train_instances = read_corpus(config.train_file, config.max_edu_num)
-    dev_instances = read_corpus(config.dev_file)
-    test_instances = read_corpus(config.test_file)
+    train_instances = read_corpus(config.train_file, config.max_edu_num, config.max_instance)
+    dev_instances = read_corpus(config.dev_file, config.max_instance)
+    test_instances = read_corpus(config.test_file, config.max_instance)
 
     print("train dialog num: ", len(train_instances))
     print("dev dialog num: ", len(dev_instances))
@@ -196,8 +196,8 @@ if __name__ == '__main__':
     vocab = create_vocab(train_instances, config.max_vocab_size)
     torch.set_num_threads(args.thread)
 
-    tok_helper = BertTokenHelper(config.bert_dir)
-    bert_extractor = BertExtractor(config.bert_dir, config, tok_helper)
+    tok_helper = AutoTokenHelper(config.bert_dir)
+    bert_extractor = AutoExtractor(config.bert_dir, config, tok_helper)
 
     ### use gpu or cpu
     config.use_cuda = False
