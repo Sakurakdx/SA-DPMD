@@ -7,7 +7,7 @@ import numpy as np
 import re
 
 
-def read_corpus(file, max_edu_num=10000):
+def read_corpus(file, max_edu_num=10000, max_instance=10000000):
     with open(file, mode='r', encoding='UTF8') as infile:
         info = ""
         for line in infile.readlines():
@@ -23,6 +23,10 @@ def read_corpus(file, max_edu_num=10000):
             sp_index(instance)
 
             instances.append(instance)
+
+            # 如果debug 则选部分instance
+            if len(instances) > max_instance: break
+
         return instances
 
 def sp_index(instance):
