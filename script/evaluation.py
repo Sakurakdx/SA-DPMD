@@ -25,7 +25,7 @@ def evaluation(gold_file, predict_file):
     uas_metric.print()
     print("LAS:")
     las_metric.print()
-    return las_metric.getAccuracy()
+    return uas_metric.getAccuracy(), las_metric.getAccuracy()
 
 def get_arcs(instance):
     arcs = set()
