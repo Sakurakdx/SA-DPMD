@@ -36,7 +36,7 @@ class GlobalEncoder(nn.Module):
         attention_mask = attention_mask.view(-1, max_tok_len)
 
         encoder_outputs = \
-                self.bert_extractor(input_ids, token_type_ids, attention_mask)
+                self.bert_extractor(input_ids, token_type_ids, attention_mask).hidden_states
         
 
         bert_inputs = []

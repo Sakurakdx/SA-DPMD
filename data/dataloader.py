@@ -5,9 +5,11 @@ import copy
 from data.dialog import *
 import numpy as np
 import re
-
+import torchaudio as ta
+import torch.nn.functional as F
 
 def read_corpus(file, max_edu_num=10000, max_instance=10000000):
+    audio_dir = "/".join(file.split("/")[:-1]) + "/audio/" + file.split("/")[-1].split(".")[0]
     with open(file, mode='r', encoding='UTF8') as infile:
         info = ""
         for line in infile.readlines():
@@ -22,9 +24,17 @@ def read_corpus(file, max_edu_num=10000, max_instance=10000000):
             instance.gold_rels = instance.gold_rels[:max_edu_num]
             sp_index(instance)
 
+            # 构建audio文件的路径
+            audio_list = [audio_dir + "/root.wav"]
+            for id, edu in enumerate(instance.EDUs):
+                if id == 0: continue
+                audio_path = audio_dir + "/" + str(instance.id) + "_" + str(id) + ".wav"
+                audio_list.append(audio_path)
+            instance.audio_list = audio_list
+
             instances.append(instance)
 
-            # 如果debug 则选部分instance
+            # filter
             if len(instances) > max_instance: break
 
         return instances
@@ -240,4 +250,51 @@ def batch_feat_variable(onebatch, vocab):
                 diaglog_feats[idx, idy, idz, 2] = (instance.EDUs[idy]["turn"] == instance.EDUs[idz]["turn"])
 
     diaglog_feats = torch.tensor(diaglog_feats).type(torch.FloatTensor)
+
     return diaglog_feats
+
+def batch_audio_feature(onebatch, args):
+    # convert to features 
+    for inst in onebatch:
+        audio_features = []
+        for audio_path in inst.audio_list:
+            wavform, sample_frequency = ta.load(audio_path) # [channel, time], 采样率
+            # 获得Fbank特征
+            feature = ta.compliance.kaldi.fbank(wavform, num_mel_bins=args.num_mel_bins, sample_frequency=sample_frequency, dither=0.0)
+            # feature = ta.compliance.kaldi.mfcc(wavform, num_mel_bins=args.num_mel_bins, sample_frequency=sample_frequency, dither=0.0)
+            if args.normalization:
+                std, mean = torch.std_mean(feature)
+                feature = (feature - mean) / std
+            audio_features.append(feature)
+        inst.audio_features = audio_features
+
+    # convert batch features
+    batch_size = len(onebatch)
+    aduio_lengths = [len(instance.audio_list) for instance in onebatch]
+    max_aduio_len = max(aduio_lengths)
+    audio_feature_lengths = [len(audio_feat) for inst in onebatch for audio_feat in inst.audio_features]
+    max_audio_feat_len = max(audio_feature_lengths)
+    feature_length = onebatch[0].audio_features[0].shape[1]
+    # batch_audio_feats = np.ones([batch_size * max_aduio_len, max_audio_feat_len, feature_length])
+    # batch_audio_feature_masks = np.ones([batch_size * max_aduio_len, max_audio_feat_len, feature_length])
+    
+    padded_audio_features = []
+    padded_audio_feature_masks = []
+    for idx, inst in enumerate(onebatch):
+        for idy, audio_feature in enumerate(inst.audio_features):
+            audio_feature_length = len(audio_feature)
+            padding_feature_len = max_audio_feat_len - audio_feature_length
+            padded_audio_features.append(
+                F.pad(audio_feature, pad=(0, 0, 0, padding_feature_len), value=0.0).unsqueeze(0))
+            padded_audio_feature_masks.append([1] * audio_feature_length + [0] * padding_feature_len)
+
+        while idy < max_aduio_len - 1:
+            padded_audio_features.append(torch.zeros([1, max_audio_feat_len, feature_length]))
+            padded_audio_feature_masks.append([0] * max_audio_feat_len)
+            idy += 1
+
+    batch_audio_feats = torch.cat(padded_audio_features, dim=0).view(batch_size , max_aduio_len, max_audio_feat_len, feature_length).float()
+    batch_audio_feature_masks = (torch.IntTensor(padded_audio_feature_masks) > 0).view(batch_size , max_aduio_len, max_audio_feat_len)
+    audio_feature_lengths = torch.IntTensor(audio_feature_lengths)
+
+    return batch_audio_feats, batch_audio_feature_masks, audio_feature_lengths

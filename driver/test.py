@@ -10,7 +10,7 @@ from modules.decoder import *
 from script.evaluation import *
 from modules.global_encoder import *
 from data.auto_tokenizer import *
-from modules.auto_plm import *
+from modules.text_encoder import *
 from modules.sp_encoder import SPEncoder
 from driver.train import predict
 
@@ -51,7 +51,7 @@ if __name__ == '__main__':
     torch.set_num_threads(args.thread)
 
     tok_helper = AutoTokenHelper(config.load_bert_path)
-    bert_extractor = AutoExtractor(config.load_bert_path, config, tok_helper)
+    bert_extractor = TextEncoder(config.load_bert_path, config, tok_helper)
 
     global_encoder = GlobalEncoder(vocab, config, bert_extractor)
     state_encoder = StateEncoder(vocab, config)

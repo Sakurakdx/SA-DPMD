@@ -59,8 +59,11 @@ class DialogDP(object):
         self.arc_logits = torch.cat(arc_logits, dim=1)
         self.rel_logits = torch.cat(rel_logits, dim=1)
     '''
-    def forward(self, batch_input_ids, batch_token_type_ids, batch_attention_mask, batch_sp, token_lengths,
-                edu_lengths, arc_masks, feats):
+    def forward(
+        self, batch_input_ids, batch_token_type_ids, batch_attention_mask, 
+        batch_sp, token_lengths,edu_lengths, arc_masks, feats,
+        batch_audio_feats, batch_audio_feature_masks, audio_feature_lengths
+        ):
         if self.use_cuda:
             batch_input_ids = batch_input_ids.cuda()
             batch_token_type_ids = batch_token_type_ids.cuda()
@@ -69,8 +72,15 @@ class DialogDP(object):
 
             arc_masks = arc_masks.cuda()
             feats = feats.cuda()
+            batch_audio_feats = batch_audio_feats.cuda()
+            batch_audio_feature_masks = batch_audio_feature_masks.cuda()
+            audio_feature_lengths = audio_feature_lengths.cuda()
 
-        global_outputs = self.global_encoder(batch_input_ids, batch_token_type_ids, batch_attention_mask, batch_sp, edu_lengths)
+        global_outputs = self.global_encoder(
+            batch_input_ids, batch_token_type_ids, batch_attention_mask, edu_lengths,
+            batch_audio_feats, batch_audio_feature_masks, audio_feature_lengths
+            )
+
         sp_outputs = self.sp_encoder(batch_sp, edu_lengths)
 
         state_hidden = self.state_encoder(global_outputs, sp_outputs)
