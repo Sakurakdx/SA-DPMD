@@ -11,4 +11,4 @@ examples/.DS_Store
 log/*
 ddp*
 save*
-baseline
+base*
