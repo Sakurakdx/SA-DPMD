@@ -1,9 +1,8 @@
 from data.dataloader import *
 
 def evaluation(gold_file, predict_file):
-
-    gold_instances = read_corpus(gold_file)
-    predict_instances = read_corpus(predict_file)
+    gold_instances = read_corpus(gold_file, eval=True)
+    predict_instances = read_corpus(predict_file, eval=True)
     assert len(gold_instances) == len(predict_instances)
     uas_metric, las_metric = Metric(), Metric()
     for g_instance, p_instance in zip(gold_instances, predict_instances):

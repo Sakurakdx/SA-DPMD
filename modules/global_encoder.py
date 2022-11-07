@@ -17,9 +17,15 @@ class GlobalEncoder(nn.Module):
 
         self.mlp_words = nn.ModuleList([NonLinear(config.bert_hidden_size, config.word_dims, activation=nn.Tanh()) \
                                         for i in range(self.layer_num)])
+        self.mlp_audio = NonLinear(config.audio_feat_dims, config.word_dims, activation=nn.Tanh())
+        self.mlp_visual = NonLinear(config.visual_feat_dims, config.word_dims, activation=nn.Tanh())
+        self.mlp_x = NonLinear(config.word_dims * 3, config.word_dims, activation=nn.Tanh())
 
         for i in range(self.layer_num):
             nn.init.kaiming_uniform_(self.mlp_words[i].linear.weight, a=math.sqrt(5), mode='fan_in', nonlinearity='tanh')
+        nn.init.kaiming_uniform_(self.mlp_audio.linear.weight, a=math.sqrt(5), mode='fan_in', nonlinearity='tanh')
+        nn.init.kaiming_uniform_(self.mlp_visual.linear.weight, a=math.sqrt(5), mode='fan_in', nonlinearity='tanh')
+        nn.init.kaiming_uniform_(self.mlp_x.linear.weight, a=math.sqrt(5), mode='fan_in', nonlinearity='tanh')
 
         self.rescale = ScalarMix(mixture_size=self.layer_num)
 
@@ -29,7 +35,8 @@ class GlobalEncoder(nn.Module):
                               bidirectional=True, batch_first=True)
         self.hidden_drop = nn.Dropout(config.dropout_gru_hidden)
 
-    def forward(self, input_ids, token_type_ids, attention_mask, speakers, edu_lengths):
+    def forward(self, input_ids, token_type_ids, attention_mask, edu_lengths,
+    audio_features, visual_features):
         batch_size, max_edu_num, max_tok_len = input_ids.size()
         input_ids = input_ids.view(-1, max_tok_len)
         token_type_ids = token_type_ids.view(-1, max_tok_len)
@@ -51,7 +58,14 @@ class GlobalEncoder(nn.Module):
         x_embed = self.rescale(proj_hiddens)
         x_embed = self.drop_emb(x_embed)
 
-        x_embed = x_embed.view(batch_size, max_edu_num, -1)
+        # 处理三种模态的特征
+        textual_embed = x_embed.view(batch_size, max_edu_num, -1)
+
+        audio_embed = self.mlp_audio(audio_features)
+        visual_embed = self.mlp_visual(visual_features)
+
+
+        x_embed = self.mlp_x(torch.cat([textual_embed, audio_embed, visual_embed], dim=-1))
 
         gru_input = nn.utils.rnn.pack_padded_sequence(x_embed, edu_lengths, batch_first=True, enforce_sorted=False)
         outputs, _ = self.edu_GRU(gru_input)

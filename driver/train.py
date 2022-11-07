@@ -10,7 +10,7 @@ from modules.dialog_dp import *
 from modules.optimizer import *
 from modules.decoder import *
 from script.evaluation import *
-from modules.global_encoder_v2 import *
+from modules.global_encoder import *
 from modules.multimodal_encoder import *
 from data.auto_tokenizer import *
 from modules.text_encoder import *
@@ -27,22 +27,18 @@ def train(train_instances, dev_instances, test_instances, parser, vocab, config,
     best_dev_las = 0
     batch_num = int(np.ceil(len(train_instances) / float(config.train_batch_size)))
 
-    bert_param = list(parser.global_encoder.multimodal_encoder.text_encoder.parameters())
-    bert_param_k = [k for k, v in parser.global_encoder.multimodal_encoder.text_encoder.named_parameters()]
-    audio_param = []
-    for k, v in parser.global_encoder.multimodal_encoder.named_parameters():
-        if k[13:] not in bert_param_k:
-            audio_param.append(v)
+    bert_param = list(parser.global_encoder.bert_extractor.parameters())
 
     parser_param = \
         list(parser.global_encoder.mlp_words.parameters()) + \
+        list(parser.global_encoder.mlp_audio.parameters()) + \
+        list(parser.global_encoder.mlp_visual.parameters()) + \
         list(parser.global_encoder.edu_GRU.parameters()) + \
         list(parser.sp_encoder.parameters()) + \
         list(parser.state_encoder.parameters()) + \
         list(parser.decoder.parameters())
 
     model_param = [{'params': bert_param, 'lr': config.bert_learning_rate},
-                   {'params': audio_param, 'lr': config.audio_learning_rate},
                    {'params': parser_param, 'lr': config.learning_rate}]
     
     optimizer = Optimizer(model_param, config)
@@ -61,13 +57,13 @@ def train(train_instances, dev_instances, test_instances, parser, vocab, config,
             batch_sp = batch_sp_variable(onebatch, vocab)
             edu_lengths, arc_masks = batch_data_variable(onebatch, vocab)
             feats = batch_feat_variable(onebatch, vocab)
-            batch_audio_feats, batch_audio_feature_masks, audio_feature_lengths = batch_audio_feature(onebatch, config)
+            batch_audio_feats, batch_visual_features = batch_other_feature(onebatch, config)
             gold_arcs, gold_rels = batch_label_variable(onebatch, vocab)
             with autocast():
                 parser.forward(
                     batch_input_ids, batch_token_type_ids, batch_attention_mask, 
                     batch_sp, token_lengths, edu_lengths, arc_masks, feats,
-                    batch_audio_feats, batch_audio_feature_masks, audio_feature_lengths
+                    batch_audio_feats, batch_visual_features
                     )
                 loss = parser.compute_loss(gold_arcs, gold_rels)
                 loss = loss / config.update_every
@@ -127,7 +123,9 @@ def train(train_instances, dev_instances, test_instances, parser, vocab, config,
 
                         dp_model = {
                             "mlp_words": parser.global_encoder.mlp_words.state_dict(),
-                            # "rescale": parser.global_encoder.rescale.state_dict(),
+                            "mlp_audio":parser.global_encoder.mlp_audio.state_dict(),
+                            "mlp_visual":parser.global_encoder.mlp_visual.state_dict(),
+                            "rescale": parser.global_encoder.rescale.state_dict(),
                             "edu_GRU": parser.global_encoder.edu_GRU.state_dict(),
                             "sp_encoder": parser.sp_encoder.state_dict(),
                             "state_encoder": parser.state_encoder.state_dict(),
@@ -151,12 +149,12 @@ def predict(instances, parser, vocab, config, tokenizer, outputFile):
         batch_sp = batch_sp_variable(onebatch, vocab)
         batch_input_ids, batch_token_type_ids, batch_attention_mask, token_lengths = \
             batch_bert_variable(onebatch, config, tokenizer)
-        batch_audio_feats, batch_audio_feature_masks, audio_feature_lengths = batch_audio_feature(onebatch, config)
+        batch_audio_feats, batch_visual_features = batch_other_feature(onebatch, config)
         with autocast():
             pred_arcs, pred_rels = parser.forward(
                     batch_input_ids, batch_token_type_ids, batch_attention_mask, 
                     batch_sp, token_lengths, edu_lengths, arc_masks, feats,
-                    batch_audio_feats, batch_audio_feature_masks, audio_feature_lengths
+                    batch_audio_feats, batch_visual_features
                     )
         for batch_index, (arcs, rels) in enumerate(zip(pred_arcs, pred_rels)):
             instance = onebatch[batch_index]
@@ -179,7 +177,7 @@ def predict(instances, parser, vocab, config, tokenizer, outputFile):
             pred_dialog['relations'] = relation_list
             pred_instances.append(pred_dialog)
     out_f = open(outputFile, 'w', encoding='utf8')
-    json.dump(pred_instances, out_f)
+    json.dump(pred_instances, out_f, ensure_ascii=False)
     out_f.close()
     print("Doc num: %d,  parser time = %.2f " % (len(instances), float(time.time() - start)))
 
@@ -212,9 +210,9 @@ if __name__ == '__main__':
     config = Configurable(args.config_file, extra_args)
     writer = SummaryWriter(config.tensorboard_log_dir)
 
-    train_instances = read_corpus(config.train_file, config.max_edu_num, config.max_instance)
-    dev_instances = read_corpus(config.dev_file, config.max_instance)
-    test_instances = read_corpus(config.test_file, config.max_instance)
+    train_instances = read_corpus(config.train_file, config.modal_feat_path, config.max_edu_num, config.max_instance)
+    dev_instances = read_corpus(config.dev_file, config.modal_feat_path, config.max_instance, start_index=len(train_instances) + 2)
+    test_instances = read_corpus(config.test_file, config.modal_feat_path, config.max_instance, start_index=len(train_instances+dev_instances) + 3)
 
     print("train dialog num: ", len(train_instances))
     print("dev dialog num: ", len(dev_instances))
@@ -225,14 +223,13 @@ if __name__ == '__main__':
 
     tok_helper = AutoTokenHelper(config.plm_name_or_path)
     bert_extractor = TextEncoder(config.plm_name_or_path, config, tok_helper)
-    multimodal_encoder = MultiModalEncoder(config, bert_extractor)
 
     ### use gpu or cpu
     config.use_cuda = False
     if gpu and args.use_cuda: config.use_cuda = True
     print("\nGPU using status: ", config.use_cuda)
 
-    global_encoder = GlobalEncoder(vocab, config, multimodal_encoder)
+    global_encoder = GlobalEncoder(vocab, config, bert_extractor)
     state_encoder = StateEncoder(vocab, config)
     sp_encoder = SPEncoder(vocab, config)
     decoder = Decoder(vocab, config)
@@ -248,7 +245,6 @@ if __name__ == '__main__':
         state_encoder.cuda()
         sp_encoder.cuda()
         decoder.cuda()
-        multimodal_encoder.cuda()
         
     parser = DialogDP(global_encoder, state_encoder, sp_encoder, decoder, config)
     pickle.dump(vocab, open(config.save_vocab_path, 'wb'))

@@ -62,7 +62,7 @@ class DialogDP(object):
     def forward(
         self, batch_input_ids, batch_token_type_ids, batch_attention_mask, 
         batch_sp, token_lengths,edu_lengths, arc_masks, feats,
-        batch_audio_feats, batch_audio_feature_masks, audio_feature_lengths
+        batch_audio_feats, batch_visual_feats
         ):
         if self.use_cuda:
             batch_input_ids = batch_input_ids.cuda()
@@ -73,12 +73,11 @@ class DialogDP(object):
             arc_masks = arc_masks.cuda()
             feats = feats.cuda()
             batch_audio_feats = batch_audio_feats.cuda()
-            batch_audio_feature_masks = batch_audio_feature_masks.cuda()
-            audio_feature_lengths = audio_feature_lengths.cuda()
+            batch_visual_feats = batch_visual_feats.cuda()
 
         global_outputs = self.global_encoder(
             batch_input_ids, batch_token_type_ids, batch_attention_mask, edu_lengths,
-            batch_audio_feats, batch_audio_feature_masks, audio_feature_lengths
+            batch_audio_feats, batch_visual_feats
             )
 
         sp_outputs = self.sp_encoder(batch_sp, edu_lengths)
