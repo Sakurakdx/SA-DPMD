@@ -27,6 +27,10 @@ class Configurable:
         save_dir = self.config.get("Save", "save_dir")
         if not os.path.isdir(save_dir):
             os.makedirs(save_dir)
+        if not os.path.isdir(self.save_dev_path):
+            os.makedirs(self.save_dev_path)
+        
+        self.config.write(open(self.config_file, "w"))
 
     def add_extra_args(self, extra_args):
         """添加额外的参数"""
